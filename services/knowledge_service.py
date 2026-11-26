@@ -6,6 +6,8 @@ from typing import List, Dict, Tuple, Optional
 from db.db_router import DatabaseRouter
 from .text_embedding import embed_input
 import logging
+import asyncio
+from functools import lru_cache
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +21,7 @@ class KnowledgeService:
         self.index = None
         self.document_ids = []  # 维护文档ID与索引位置的映射
         self.initialized = False
+        self._initialize_lock = asyncio.Lock()
         
         # 默认知识库内容
         self.default_knowledge = [
@@ -76,24 +79,27 @@ class KnowledgeService:
 
     async def initialize(self):
         """初始化知识库服务"""
-        try:
-            # 检查数据库中是否已有数据
-            existing_docs = self.db.get_all_documents()
+        async with self._initialize_lock:
+            if self.initialized:
+                return
+            try:
+                # 检查数据库中是否已有数据
+                existing_docs = self.db.get_all_documents(include_inactive=True)
             
-            if not existing_docs:
-                logger.info("数据库为空，初始化默认知识库")
-                await self._create_default_knowledge()
-            else:
-                logger.info(f"从数据库加载了 {len(existing_docs)} 条知识")
+                if not existing_docs:
+                    logger.info("数据库为空，初始化默认知识库")
+                    await self._create_default_knowledge()
+                else:
+                    logger.info(f"从数据库加载了 {len(existing_docs)} 条知识")
             
-            # 构建向量索引
-            await self._build_vector_index()
-            self.initialized = True
-            logger.info("知识库服务初始化完成")
+                # 构建向量索引
+                await self._build_vector_index()
+                self.initialized = True
+                logger.info("知识库服务初始化完成")
             
-        except Exception as e:
-            logger.error(f"知识库服务初始化失败: {e}")
-            raise
+            except Exception as e:
+                logger.error(f"知识库服务初始化失败: {e}")
+                raise
 
     async def _create_default_knowledge(self):
         """创建默认知识库"""
@@ -119,6 +125,8 @@ class KnowledgeService:
         """构建向量索引"""
         try:
             documents = self.db.get_all_documents()
+            self.index = None
+            self.document_ids = []
             if not documents:
                 logger.warning("没有文档可用于构建索引")
                 return
@@ -288,3 +296,9 @@ class KnowledgeService:
     def search_by_keywords(self, keywords: List[str]) -> List[Dict]:
         """按关键词搜索文档"""
         return self.db.search_documents_by_keywords(keywords)
+
+
+@lru_cache(maxsize=1)
+def get_knowledge_service() -> KnowledgeService:
+    """Share the live index between chat and knowledge management in this process."""
+    return KnowledgeService()

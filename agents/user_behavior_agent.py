@@ -11,7 +11,8 @@ import logging
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 from config.model_provider import create_chat_model
-from .user_behavior import PatternAnalyzer, BehaviorRecorder, PreferenceManager
+from .user_behavior import PatternAnalyzer
+from services.user_behavior_service import UserBehaviorService
 
 load_dotenv()
 
@@ -19,41 +20,18 @@ load_dotenv()
 class UserBehaviorAgent:
     """简化版用户行为分析代理"""
     
-    def __init__(self):
+    def __init__(self, behavior_service=None, llm=None):
         self.logger = logging.getLogger(__name__)
-        
-        # 延迟导入Services避免循环依赖
-        self._user_behavior_service = None
-        
-        # 初始化LLM - 按照其他agent的模式
-        self.llm = self._initialize_llm()
-        
-        # 保留原有组件以维持兼容性
-        # 使用用户行为服务而不是直接访问数据库
-        try:
-            from services.user_behavior_service import UserBehaviorService
-            self.behavior_service = UserBehaviorService()
-            
-            # 为保持兼容性，创建适配器版本的组件
-            self.pattern_analyzer = PatternAnalyzer(self.behavior_service)
-            self.behavior_recorder = BehaviorRecorder(self.behavior_service)
-            self.preference_manager = PreferenceManager(self.behavior_service)
-        except ImportError:
-            # 向后兼容处理
-            from db import DatabaseRouter
-            self.db = DatabaseRouter()
-            self.behavior_service = None
-            self.pattern_analyzer = PatternAnalyzer(self.db.user_behavior)
-            self.behavior_recorder = BehaviorRecorder(self.db.user_behavior)
-            self.preference_manager = PreferenceManager(self.db.user_behavior)
-    
+        self.behavior_service = behavior_service if behavior_service is not None else UserBehaviorService()
+        self.pattern_analyzer = PatternAnalyzer(self.behavior_service)
+        self._llm = llm
+
     @property
-    def user_behavior_service(self):
-        """懒加载用户行为服务"""
-        if self._user_behavior_service is None:
-            from services.user_behavior_service import UserBehaviorService
-            self._user_behavior_service = UserBehaviorService()
-        return self._user_behavior_service
+    def llm(self):
+        """Recording and statistics do not need a model client."""
+        if self._llm is None:
+            self._llm = self._initialize_llm()
+        return self._llm
 
     def _initialize_llm(self):
         """初始化通用聊天模型"""
@@ -63,28 +41,14 @@ class UserBehaviorAgent:
                        technician_id: str = None, session_id: str = "default_session") -> bool:
         """记录用户行为"""
         try:
-            # 优先使用Services层，保持向后兼容
-            return self.user_behavior_service.record_behavior(
-                user_id="default_user",  # 统一使用default_user作为用户ID
-                action_type=action_type,
-                action_data=action_data,
-                technician_id=technician_id,
-                session_id=session_id
+            return self.behavior_service.record_behavior(
+                user_id="default_user", action_type=action_type, action_data=action_data,
+                technician_id=technician_id, session_id=session_id,
             )
-        except Exception as e:
-            self.logger.error(f"记录用户行为失败: {str(e)}")
-            # 回退到原有方法
-            try:
-                return self.behavior_recorder.record_behavior(
-                    action_type=action_type,
-                    action_data=action_data,
-                    technician_id=technician_id,
-                    session_id=session_id
-                )
-            except Exception as fallback_error:
-                self.logger.error(f"回退方法也失败: {str(fallback_error)}")
-                return False
-    
+        except Exception as exc:
+            self.logger.error("记录用户行为失败: %s", exc)
+            return False
+
     def get_user_analysis(self, user_id: str = "default_user") -> Optional[Dict[str, Any]]:
         """获取用户分析数据"""
         try:
@@ -107,7 +71,7 @@ class UserBehaviorAgent:
                 'favorite_duration': preferences.get('favorite_duration'),
                 'total_appointments': preferences.get('total_appointments'),
                 'days_since_last_appointment': days_since_last,
-                'should_send_reminder': self.pattern_analyzer.should_send_return_reminder(user_id)
+                'should_send_reminder': self.pattern_analyzer.should_send_return_reminder(user_id, preferences=preferences)
             }
         except Exception as e:
             self.logger.error(f"获取用户分析失败: {str(e)}")

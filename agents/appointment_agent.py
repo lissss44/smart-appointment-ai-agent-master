@@ -12,7 +12,7 @@ from .appointment import (
 
 load_dotenv()
 
-
+#self.appointment_history 在哪里注册了？
 class AppointmentAgent:
     """
     预约机器人主控制器
@@ -81,6 +81,7 @@ class AppointmentAgent:
     def set_shared_state(self, shared_state):
         """设置共享状态"""
         self.state = shared_state
+
 
     async def run_stream(self, user_input=None):
         """

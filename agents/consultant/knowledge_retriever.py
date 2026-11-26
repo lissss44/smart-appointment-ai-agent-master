@@ -5,14 +5,14 @@
 """
 
 from typing import List, Dict, Any
-from services.knowledge_service import KnowledgeService
+from services.knowledge_service import get_knowledge_service
 
 
 class KnowledgeRetriever:
     """知识检索器"""
     
     def __init__(self):
-        self.knowledge_service = KnowledgeService()
+        self.knowledge_service = get_knowledge_service()
         self.kb_initialized = False
     
     async def initialize(self):

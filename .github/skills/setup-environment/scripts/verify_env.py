@@ -30,11 +30,8 @@ PACKAGES: list[tuple[str, str]] = [
     ("langchain_community",    "langchain-community"),
     ("faiss",                  "faiss-cpu"),
     ("numpy",                  "numpy"),
-    ("schedule",               "schedule"),
     ("sqlalchemy",             "sqlalchemy"),
     ("requests",               "requests"),
-    ("mcp",                    "mcp"),
-    ("langchain_experimental", "langchain-experimental"),
 ]
 
 CHAT_PROVIDERS = {"qwen", "deepseek", "zhipu", "openai", "openai-compatible"}

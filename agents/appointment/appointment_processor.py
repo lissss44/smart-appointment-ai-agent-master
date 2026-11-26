@@ -268,8 +268,6 @@ class AppointmentProcessor:
             tech["id"], start_time, end_time, appointment_history, session_id
         )
         if success:
-            # 更新内存中的忙碌时段
-            self.appointment_database.update_memory_schedule(tech["id"], start_time, end_time)
             # 使用 LLM agent 生成结合北京天气的温馨提示
             if self.llm and hasattr(self, 'agent_executor'):
                 prompt = f"请获取北京今天的天气信息，然后结合天气情况为用户生成一段温馨的预约成功提示。技师姓名：{tech['name']}，性别：{tech['gender']}。请根据天气给出合适的建议和关怀。"

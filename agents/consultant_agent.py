@@ -33,7 +33,6 @@ class ConsultantAgent:
         self.response_generator = ResponseGenerator(self.llm)
         self.consultation_processor = ConsultationProcessor(
             self.knowledge_retriever,
-            self.consultation_classifier,
             self.response_generator
         )
 
@@ -60,21 +59,17 @@ class ConsultantAgent:
         self.unrelated_callback = callback
 
     async def consult(self, user_input: str) -> str:
-        """
-        基础咨询功能
-        
-        用于非流式的简单咨询场景
-        """
-        return await self.consultation_processor.process_consultation(user_input)
+        """Collect the shared consultation workflow."""
+        return "".join([part async for part in self.consult_stream(user_input)]).removeprefix("[REPLY][咨询机器人]")
 
-    async def consult_stream(self, user_input: str):
+    async def consult_stream(self, user_input: str, *, intent_confirmed: bool = False):
         """
         流式输出咨询结果
         
         这是主要的咨询入口点，协调各个组件完成咨询流程
         """
         # 1. 检查是否与咨询相关
-        is_consultation = await self.consultation_classifier.is_consultation_related(user_input)
+        is_consultation = intent_confirmed or await self.consultation_classifier.is_consultation_related(user_input)
         
         if not is_consultation:
             # 2. 处理与咨询无关的请求

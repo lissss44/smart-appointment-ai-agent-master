@@ -573,6 +573,9 @@
             
             hideTypingIndicator();
             
+
+            // 前端接收流式数据并逐步显示
+            //res.body 是这个 Response 对象的一个属性，表示服务器返回给你的数据流（响应体，response body）
             const reader = res.body.getReader();
             let botMsg = '';
             let decoder = new TextDecoder();

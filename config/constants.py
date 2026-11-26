@@ -1,5 +1,4 @@
 from enum import Enum
-busy_periods_dict = {}  # { technician_id: [ {"start": "...", "end": "..."} ] }
 
 class StateEnum(Enum):
     CLASSIFY = "classify"

@@ -6,7 +6,6 @@
 
 from typing import AsyncGenerator, Dict, Any
 from .knowledge_retriever import KnowledgeRetriever
-from .consultation_classifier import ConsultationClassifier
 from .response_generator import ResponseGenerator
 
 
@@ -14,21 +13,9 @@ class ConsultationProcessor:
     """咨询流程处理器"""
     
     def __init__(self, knowledge_retriever: KnowledgeRetriever, 
-                 consultation_classifier: ConsultationClassifier,
                  response_generator: ResponseGenerator):
         self.knowledge_retriever = knowledge_retriever
-        self.consultation_classifier = consultation_classifier
         self.response_generator = response_generator
-    
-    async def process_consultation(self, user_input: str) -> str:
-        """处理标准咨询"""
-        # 1. 检索知识
-        knowledge_docs = await self.knowledge_retriever.search_knowledge(user_input, top_k=3)
-        
-        # 2. 生成响应
-        response = await self.response_generator.generate_response(user_input, knowledge_docs)
-        
-        return response
     
     async def process_consultation_stream(self, user_input: str, session_id: str) -> AsyncGenerator[str, None]:
         """处理流式咨询"""
@@ -63,8 +50,8 @@ class ConsultationProcessor:
     async def _record_consultation_behavior(self, user_input: str, knowledge_docs: list, session_id: str):
         """记录咨询行为"""
         try:
-            from agents.user_behavior_agent import UserBehaviorAgent
-            behavior_agent = UserBehaviorAgent()
+            from services.user_behavior_service import UserBehaviorService
+            behavior_service = UserBehaviorService()
             
             action_data = {
                 'question': user_input,
@@ -72,7 +59,8 @@ class ConsultationProcessor:
                 'categories': list(set(doc.get('category', 'unknown') for doc in knowledge_docs)) if knowledge_docs else []
             }
             
-            behavior_agent.record_behavior(
+            behavior_service.record_behavior(
+                user_id="default_user",
                 action_type='consultation',
                 action_data=action_data,
                 session_id=session_id

@@ -62,7 +62,7 @@ class ClassificationProcessor:
                         yield token
                 else:
                     # 不支持的任务类型
-                    async for token in self.agent_router.handle_unsupported_task(category):
+                    async for token in self.unrelated_handler.handle_unrelated_async(task):
                         yield token
             else:
                 # 根据当前状态继续处理
@@ -75,41 +75,9 @@ class ClassificationProcessor:
             self.state_manager.force_reset()
     
     async def process_task_sync(self, task: str) -> str:
-        """
-        同步处理任务分类和路由（非流式）
-        
-        Args:
-            task: 用户输入的任务内容
-            
-        Returns:
-            str: 处理结果
-        """
-        try:
-            # 检查是否需要进行分类
-            if self.state_manager.should_classify():
-                category = await self.task_classifier.classify_task(task)
-                
-                if category == "appointment" and self.agent_router.appointment_agent:
-                    self.state_manager.transition_to_appointment()
-                    return await self.agent_router.appointment_agent.run(user_input=task)
-                elif category == "query" and self.agent_router.consultant_agent:
-                    self.state_manager.transition_to_consultation()
-                    async with self.agent_router.consultant_agent as agent:
-                        return await agent.consult(task)
-                else:
-                    return "暂不支持该类型任务。请只询问和按摩、预约相关的问题。"
-            else:
-                # 根据当前状态继续处理
-                if self.state_manager.is_in_appointment_flow():
-                    return await self.agent_router.appointment_agent.run(user_input=task)
-                elif self.state_manager.is_in_consultation_flow():
-                    async with self.agent_router.consultant_agent as agent:
-                        return await agent.consult(task)
-                
-        except Exception as e:
-            self.state_manager.force_reset()
-            return f"处理任务时发生错误: {str(e)}"
-    
+        """Collect the shared streaming workflow into one response."""
+        return "".join([part async for part in self.process_task_stream(task)])
+
     def get_current_state_info(self) -> dict:
         """获取当前处理状态信息"""
         return {
@@ -123,22 +91,3 @@ class ClassificationProcessor:
         """重置对话状态"""
         self.state_manager.force_reset()
         self.unrelated_handler.reset_reply_rotation()
-    
-    async def handle_unrelated_request(self, user_input: str, async_mode: bool = True):
-        """
-        处理无关请求
-        
-        Args:
-            user_input: 用户输入
-            async_mode: 是否使用异步模式
-            
-        Returns:
-            异步模式返回AsyncGenerator，同步模式返回str
-        """
-        if async_mode:
-            async for token in self.unrelated_handler.handle_unrelated_async(user_input):
-                yield token
-        else:
-            # 对于同步模式，我们需要单独处理
-            result = await self.unrelated_handler.handle_unrelated_sync(user_input)
-            yield result

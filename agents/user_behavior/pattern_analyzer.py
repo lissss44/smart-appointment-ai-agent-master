@@ -89,10 +89,11 @@ class PatternAnalyzer:
             self.logger.error(f"分析用户偏好失败: {str(e)}")
             return None
     
-    def should_send_return_reminder(self, user_id: str = "default_user", days_threshold: int = 30) -> bool:
+    def should_send_return_reminder(self, user_id: str = "default_user", days_threshold: int = 30, *, preferences=None) -> bool:
         """判断是否应该发送回访提醒"""
         try:
-            preferences = self.analyze_user_preferences(user_id)
+            if preferences is None:
+                preferences = self.analyze_user_preferences(user_id)
             if not preferences or preferences['total_appointments'] < 2:
                 return False
             

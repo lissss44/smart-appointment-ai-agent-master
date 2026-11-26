@@ -2,8 +2,6 @@
 
 import numpy as np
 import faiss
-import os
-import pickle
 from config.model_provider import create_embedding_model
 
 
@@ -33,22 +31,3 @@ def embed_input(input_text: str, model: str = "text-embedding-ada-002",
                 timeout: int = 600) -> list:
     embeddings = create_embedding_model()
     return embeddings.embed_query(input_text)
-
-
-def save_technician_embeddings(embeddings, indices, path="data/technician_embeddings.pkl"):
-    """
-    保存技师嵌入向量和索引到本地
-    """
-    with open(path, "wb") as f:
-        pickle.dump({"embeddings": embeddings, "indices": indices}, f)
-
-
-def load_technician_embeddings(path="data/technician_embeddings.pkl"):
-    """
-    加载本地保存的技师嵌入向量和索引
-    """
-    if not os.path.exists(path):
-        return None, None
-    with open(path, "rb") as f:
-        data = pickle.load(f)
-        return data.get("embeddings"), data.get("indices")

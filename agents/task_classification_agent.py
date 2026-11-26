@@ -83,18 +83,11 @@ class TaskClassificationAgent:
         print(f"[DEBUG] 预约机器人转交的请求：{user_input}")
         
         # 重新进行任务分类
-        result = ""
-        async for token in self.classification_processor.process_task_stream(user_input):
-            result += token
-        return result
+        return await self.classify_task(user_input)
 
     async def handle_unrelated_async(self, user_input):
-        """处理无关请求（异步流版本）"""
-        # 与预约无关的请求应该重新进行分类，而不是直接拒绝
-        print(f"[DEBUG] 预约机器人转交的请求：{user_input}")
-        
-        # 重新进行任务分类
-        async for token in self.classification_processor.process_task_stream(user_input):
+        """Reclassify a request handed back by a business agent."""
+        async for token in self.classify_task_stream(user_input):
             yield token
 
     # ===========================================

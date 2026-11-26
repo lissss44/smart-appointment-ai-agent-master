@@ -53,7 +53,7 @@ class AgentRouter:
             yield "[ERROR]预约服务暂时不可用"
             return
         
-        # 转换状态
+        # 转换状态，这意味着接下来用户再发送预约相关信息时，可以直接交给预约 Agent，不需要重新执行中央意图分类。
         self.state_manager.transition_to_appointment()
         
         # 生成思考提示
@@ -90,26 +90,12 @@ class AgentRouter:
         # 调用咨询Agent
         try:
             async with self.consultant_agent as agent:
-                async for token in agent.consult_stream(task):
+                async for token in agent.consult_stream(task, intent_confirmed=True):
                     yield token
         except Exception as e:
             yield f"[ERROR]咨询处理失败: {str(e)}"
             self.state_manager.reset_to_classify()
     
-    async def handle_unsupported_task(self, category: str) -> AsyncGenerator[str, None]:
-        """
-        处理不支持的任务类型
-        
-        Args:
-            category: 任务分类结果
-            
-        Yields:
-            str: 回复内容
-        """
-        reply = "暂不支持该类型任务。请只询问和按摩、预约相关的问题。"
-        yield "[REPLY][归类机器人]"
-        for char in reply:
-            yield char
     
     async def route_by_state(self, task: str) -> AsyncGenerator[str, None]:
         """

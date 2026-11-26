@@ -7,12 +7,9 @@ FastAPI应用程序
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from services.knowledge_service import KnowledgeService
+from services.knowledge_service import get_knowledge_service
 from services.technician_service import TechnicianService
-from services.recommendation_service import RecommendationService
-from typing import List, Optional
 import logging
-import asyncio
 
 # 导入路由
 from api import api_routers
@@ -23,18 +20,8 @@ from web import router as web_router
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Pydantic模型
-from pydantic import BaseModel
 
-class KnowledgeRequest(BaseModel):
-    content: str
-    category: str
-    keywords: List[str] = []
 
-class SearchRequest(BaseModel):
-    query: str
-    top_k: int = 5
-    category: Optional[str] = None
 
 async def initialize_system():
     """系统启动时自动初始化"""
@@ -43,21 +30,13 @@ async def initialize_system():
         
         # 初始化知识库服务
         logger.info("📚 初始化知识库服务...")
-        knowledge_service = KnowledgeService()
+        knowledge_service = get_knowledge_service()
         await knowledge_service.initialize()
         
         # 初始化技师服务
         logger.info("👨‍⚕️ 初始化技师服务...")
         technician_service = TechnicianService()
         technician_service.initialize_default_technicians()
-        
-        # 初始化推荐服务
-        logger.info("🎯 启动推荐调度服务...")
-        recommendation_service = RecommendationService()
-        if recommendation_service.start_scheduler():
-            logger.info("✅ 推荐调度服务启动成功")
-        else:
-            logger.warning("⚠️ 推荐调度服务启动失败")
         
         logger.info("✅ 系统初始化完成！")
         
