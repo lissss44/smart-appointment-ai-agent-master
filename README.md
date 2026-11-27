@@ -1,6 +1,6 @@
 # Smart Appointment AI Agent
 
-> **代码清理更新（2026-11-26）**：当前聊天统一走 `/chat/stream`，移除了失效的 `/api/appointment/create`、`/api/consultation/ask`、`/api/task/classify`；`/chat` 等旧网址作为同一处理函数的别名保留。知识库管理与咨询共享进程内服务和 FAISS 索引，知识变更会同步刷新索引。移除了未使用的数据库兼容类、内存排班副本、向量文件缓存函数、空配置及未实现的定时推荐线程。用户回访保留规则分析与手动生成文案接口。下文旧架构描述中的定时推荐、MCP 服务目录等不代表当前已实现功能。
+> **代码清理更新（2026-11-26）**：当前聊天统一走 `/chat/stream`，移除了失效的 `/api/appointment/create`、`/api/consultation/ask`、`/api/task/classify`；已移除前端未使用的 `/chat`、`/user_behavior_analysis` 和两种 `dashboard_data` 兼容别名，以及未使用的单条知识、单个技师和单个技师排班查询接口。知识库管理与咨询共享进程内服务和 FAISS 索引，知识变更会同步刷新索引。移除了未使用的数据库兼容类、内存排班副本、向量文件缓存函数、空配置及未实现的定时推荐线程。用户回访保留规则分析与手动生成文案接口。下文旧架构描述中的定时推荐、MCP 服务目录等不代表当前已实现功能。
 
 Smart Appointment AI Agent 是一个面向按摩门店场景的智能预约与咨询系统。项目基于 FastAPI、LangChain、FAISS、SQLite 和多 Agent 协作架构，实现了意图识别、RAG 知识问答、技师智能匹配、预约管理、用户行为分析和个性化提醒等能力。
 

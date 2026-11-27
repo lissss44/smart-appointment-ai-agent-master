@@ -2,12 +2,11 @@
 用户行为分析API - 简化版本
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from typing import Optional
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/user-behavior", tags=["用户行为分析"])
-router_underscore = APIRouter(prefix="/api/user_behavior", tags=["用户行为分析"])
 
 
 class UserAnalysisResponse(BaseModel):
@@ -57,16 +56,10 @@ async def get_user_analysis(user_id: str = "default_user") -> UserAnalysisRespon
         return UserAnalysisResponse()
 
 
-@router_underscore.get("/dashboard_data", response_model=UserAnalysisResponse, include_in_schema=False)
-@router.get("/dashboard_data", response_model=UserAnalysisResponse, include_in_schema=False)
 @router.get("/analysis", response_model=UserAnalysisResponse)
 async def get_default_user_analysis():
     """获取默认用户的行为分析数据"""
     return await get_user_analysis("default_user")
-
-
-
-
 
 
 class ReminderRequest(BaseModel):

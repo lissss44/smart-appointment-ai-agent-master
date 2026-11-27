@@ -286,7 +286,8 @@ def test_knowledge_api_crud_refreshes_chat_index(client, knowledge):
     assert "90元" in found[0]["content"]
     assert client.delete(f"/api/knowledge/{doc_id}").status_code == 200
     assert knowledge.index is None
-    assert client.get(f"/api/knowledge/{doc_id}").status_code == 404
+    assert client.get("/api/knowledge/").json()["total_count"] == 0
+    assert client.post("/api/knowledge/search", json={"query": "价格"}).json()["data"] == []
 
 
 @pytest.mark.parametrize("path", ["/api/appointment/create", "/api/consultation/ask", "/api/task/classify"])
@@ -295,24 +296,43 @@ def test_retired_api_is_not_registered(client, path):
     assert path not in client.get("/openapi.json").json()["paths"]
 
 
-@pytest.mark.parametrize("path", ["/chat", "/chat/stream"])
-def test_chat_aliases_use_shared_workflow(client, path):
-    reply = client.post(path, json={"message": "预约按摩"})
+def test_chat_uses_current_workflow(client):
+    reply = client.post("/chat/stream", json={"message": "预约按摩"})
     assert reply.status_code == 200
     assert "预约:预约按摩" in reply.text
 
 
-def test_page_aliases_and_relative_behavior_api(client):
-    first = client.get("/user_behavior")
-    second = client.get("/user_behavior_analysis")
-    assert first.status_code == second.status_code == 200
-    assert first.text == second.text
-    assert "127.0.0.1:8000" not in first.text
-    assert "'/api/user-behavior/analysis'" in first.text
+def test_behavior_page_uses_relative_api(client):
+    page = client.get("/user_behavior")
+    assert page.status_code == 200
+    assert "127.0.0.1:8000" not in page.text
+    assert "'/api/user-behavior/analysis'" in page.text
 
 
-def test_aliases_bind_same_handler(client):
-    routes = {r.path: r.endpoint for r in client.app.routes if hasattr(r, "endpoint")}
-    assert routes["/chat"] is routes["/chat/stream"]
-    assert routes["/api/user-behavior/analysis"] is routes["/api/user-behavior/dashboard_data"]
-    assert routes["/api/user-behavior/analysis"] is routes["/api/user_behavior/dashboard_data"]
+@pytest.mark.parametrize("method,path,status", [
+    ("GET", "/user_behavior_analysis", 404),
+    ("POST", "/chat", 404),
+    ("GET", "/api/user-behavior/dashboard_data", 404),
+    ("GET", "/api/user_behavior/dashboard_data", 404),
+    ("GET", "/api/knowledge/1", 405),
+    ("GET", "/api/technicians/1", 404),
+    ("GET", "/api/technicians/1/schedule", 404),
+])
+def test_unused_routes_are_removed(client, method, path, status):
+    assert client.request(method, path).status_code == status
+    routes = {(verb, route.path) for route in client.app.routes for verb in getattr(route, "methods", [])}
+    route_patterns = {
+        "/api/knowledge/1": "/api/knowledge/{knowledge_id}",
+        "/api/technicians/1": "/api/technicians/{technician_id}",
+        "/api/technicians/1/schedule": "/api/technicians/{technician_id}/schedule",
+    }
+    assert (method, route_patterns.get(path, path)) not in routes
+
+
+def test_knowledge_page_does_not_load_data_twice(client, knowledge, monkeypatch):
+    def unexpected_read(*args, **kwargs):
+        raise AssertionError("HTML rendering must leave data loading to the existing frontend fetch")
+    monkeypatch.setattr(knowledge, "get_all_documents", unexpected_read)
+    page = client.get("/knowledge")
+    assert page.status_code == 200
+    assert "fetch('/api/knowledge')" in page.text

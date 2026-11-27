@@ -22,16 +22,12 @@ class ChatRequest(BaseModel):
     message: str
 
 
-
 @router.get("/", response_class=HTMLResponse, summary="主页")
 async def read_root(request: Request):
     """渲染主页聊天界面"""
     return templates.TemplateResponse("index.html", {"request": request})
 
 
-
-
-@router.post("/chat", include_in_schema=False)
 @router.post("/chat/stream", summary="流式聊天")
 async def chat_stream_endpoint(chat: ChatRequest):
     """处理流式聊天请求"""
@@ -42,9 +38,6 @@ async def chat_stream_endpoint(chat: ChatRequest):
     return StreamingResponse(token_generator(), media_type="text/plain")
 
 
-
-
-@router.get("/user_behavior_analysis", response_class=HTMLResponse, include_in_schema=False)
 @router.get("/user_behavior", response_class=HTMLResponse, summary="用户行为分析页面")
 async def user_behavior_page(request: Request):
     """用户行为分析页面"""
@@ -52,28 +45,8 @@ async def user_behavior_page(request: Request):
 
 @router.get("/knowledge", response_class=HTMLResponse, summary="知识库管理页面")
 async def knowledge_page(request: Request):
-    """知识库管理页面"""
-    # 通过API层获取知识库数据
-    try:
-        from api.knowledge import get_all_knowledge
-        
-        # 调用API层函数获取数据
-        knowledge_data = await get_all_knowledge()
-        documents = knowledge_data.get("documents", [])
-        categories = knowledge_data.get("categories", [])
-        
-        return templates.TemplateResponse("knowledge_management.html", {
-            "request": request,
-            "documents": documents,
-            "categories": categories
-        })
-    except Exception as e:
-        return templates.TemplateResponse("knowledge_management.html", {
-            "request": request,
-            "documents": [],
-            "categories": [],
-            "error": str(e)
-        })
+    """返回页面；知识列表由前端调用 /api/knowledge 加载。"""
+    return templates.TemplateResponse("knowledge_management.html", {"request": request})
 
 @router.get("/technician", response_class=HTMLResponse, summary="技师状态页面")
 async def technician_page(request: Request):

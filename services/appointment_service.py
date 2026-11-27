@@ -19,6 +19,7 @@ class AppointmentService:
     """预约服务类"""
     
     def __init__(self, db_path: str = 'sqlite:///data/smart_appointment.db'):
+        """初始化预约服务类""" #从大的db_router中获取技师repo
         self.db_router = DatabaseRouter(db_path)
         self.technician_repo = self.db_router.technicians
     

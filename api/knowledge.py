@@ -9,7 +9,6 @@ router = APIRouter(prefix="/api/knowledge", tags=["知识库管理"])
 
 
 class KnowledgeItem(BaseModel):
-    id: int = None
     question: str
     answer: str
     category: str = "general"
@@ -42,25 +41,6 @@ async def get_all_knowledge():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取知识库失败: {str(e)}")
-
-
-@router.get("/{knowledge_id}")
-async def get_knowledge(knowledge_id: int):
-    """获取特定知识条目"""
-    try:
-        knowledge_service = get_knowledge_service()
-        await knowledge_service.initialize()
-        entry = knowledge_service.get_document(knowledge_id)
-        if not entry or not entry.get("is_active", True):
-            raise HTTPException(status_code=404, detail="知识条目不存在")
-        return {
-            "status": "success",
-            "data": entry
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取知识条目失败: {str(e)}")
 
 
 @router.post("/")
